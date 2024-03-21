@@ -18,3 +18,8 @@ bash ./setup-mac.sh
 ```bash
 python main.py
 ```
+
+
+## Links
+
+* [Custom-TkInter](https://customtkinter.tomschimansky.com/documentation/)
