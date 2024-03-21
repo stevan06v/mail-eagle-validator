@@ -11,12 +11,13 @@ def shorten_file_path(file_path, max_length=15, prefix_length=5):
     else:
         return file_path
 
+
 class MyTabView(customtkinter.CTkTabview):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
 
         self.configure(width=400,
-                       height=400,)
+                       height=400, )
 
         # create tabs
         self.add("Single")
@@ -26,21 +27,25 @@ class MyTabView(customtkinter.CTkTabview):
 
         # tab "Single":
         def submit():
-            print(emailEntry.get())
+            print(emailInput.get())
 
+        # label for email-field
         emailLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Email Address:", fg_color="transparent")
         emailLabel.grid(row=0, column=0, padx=0, pady=10)
 
-        emailEntry = customtkinter.CTkEntry(master=self.tab("Single"), placeholder_text="Email for validation")
-        emailEntry.configure(width=200)
-        emailEntry.grid(row=0, column=1, padx=0, pady=10)
+        # email-input-field
+        emailInput = customtkinter.CTkEntry(master=self.tab("Single"), placeholder_text="Email for validation")
+        emailInput.configure(width=200)
+        emailInput.grid(row=0, column=1, padx=0, pady=10)
 
+        # submit-button
         button = customtkinter.CTkButton(master=self.tab("Single"), text="Validate", command=submit)
         button.grid(row=1, column=0, padx=20, pady=20, sticky="s")  # Place the button at the bottom
 
+
         # tab "Multiple":
         def submitMultiple():
-            print(emailEntry.get())
+            print(emailInput.get())
 
         def openFileDialog():
             name = fd.askopenfilename()
@@ -65,7 +70,6 @@ class MyTabView(customtkinter.CTkTabview):
                                                  command=optionmenuCallback)
         optionmenu.set(",")
         optionmenu.grid(row=1, column=1, padx=20, pady=20)  # Place the button at the bottom
-
 
         # submit button for multiple
         buttonMultiple = customtkinter.CTkButton(master=self.tab("Multiple"), text="Validate", command=submitMultiple)
