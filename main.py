@@ -4,7 +4,7 @@ import os
 import threading
 from tkinter import filedialog as fd
 from email_validator import validate_email, caching_resolver, EmailNotValidError
-
+from disposable_email_domains import blocklist
 
 class TabView(customtkinter.CTkTabview):
     def __init__(self, master, **kwargs):
@@ -31,13 +31,17 @@ class TabView(customtkinter.CTkTabview):
                 errorMessageLabel.configure(text="")
                 resolver = caching_resolver(timeout=10)
                 emailInfo = validate_email(emailInput.get(), check_deliverability=True, dns_resolver=resolver)
-                print(emailInfo)  # Print the whole object
 
                 normalizedText.configure(text=emailInfo.normalized)
                 domainText.configure(text=emailInfo.domain)
                 localPartText.configure(text=emailInfo.local_part)
 
-                validLabel.configure(text="The provided email address is valid!", text_color="green")
+                is_in_blocklist = emailInfo.domain in blocklist
+
+                if is_in_blocklist is False:
+                    validLabel.configure(text="The provided email address is valid!", text_color="green")
+                else:
+                    validLabel.configure(text="Email-Address found in blacklist!", text_color="red")
 
             except EmailNotValidError as e:
 
@@ -47,6 +51,8 @@ class TabView(customtkinter.CTkTabview):
 
                 validLabel.configure(text="The provided email address is invalid!", text_color="red")
                 errorMessageLabel.configure(text=str(e))
+
+
 
         emailInput = customtkinter.CTkEntry(master=self.tab("Single"), width=300, height=40,
                                             placeholder_text="Email for validation")
