@@ -6,6 +6,7 @@ from tkinter import filedialog as fd
 from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
 
+
 class TabView(customtkinter.CTkTabview):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -52,7 +53,8 @@ class TabView(customtkinter.CTkTabview):
                 validLabel.configure(text="The provided email address is invalid!", text_color="red")
                 errorMessageLabel.configure(text=str(e))
 
-
+        textbox = customtkinter.CTkTextbox(master=self.tab("Single"))
+        textbox.insert("0.0", "new text to insert")  # insert at line 0 character 0
 
         emailInput = customtkinter.CTkEntry(master=self.tab("Single"), width=300, height=40,
                                             placeholder_text="Email for validation")
@@ -61,32 +63,25 @@ class TabView(customtkinter.CTkTabview):
         # Additional labels and fields for parameters in single tab
         normalizedLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Normalized:", fg_color="transparent",
                                                  font=("System", 12, "bold"))
-        normalizedLabel.grid(row=0, column=0, pady=(100, 5))
+        normalizedLabel.grid(row=0, column=0, padx=50, pady=(100, 0), sticky="w")
 
-        normalizedText = customtkinter.CTkLabel(master=self.tab("Single"), text="...",
-                                                font=("System", 12))
-        normalizedText.grid(row=0, column=1, pady=(100, 5))
+        normalizedText = customtkinter.CTkLabel(master=self.tab("Single"), text="...", font=("System", 12))
+        normalizedText.grid(row=0, column=1, padx=5, pady=(100, 0), sticky="w")
 
         # domain label
-        domainLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Domain:",
-                                             font=("System", 12, "bold"))
-        domainLabel.grid(row=1, column=0, pady=(0, 5))
+        domainLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Domain:", font=("System", 12, "bold"))
+        domainLabel.grid(row=1, column=0, padx=50, pady=0, sticky="w")
 
-        domainText = customtkinter.CTkLabel(master=self.tab("Single"), text="...",
-                                            font=("System", 12))
-        domainText.grid(row=1, column=1, pady=(0, 5))
+        domainText = customtkinter.CTkLabel(master=self.tab("Single"), text="...", font=("System", 12))
+        domainText.grid(row=1, column=1, padx=5, pady=0, sticky="w")
 
         # localPart label
         localPartLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Local part:", fg_color="transparent",
                                                 font=("System", 12, "bold"))
-        localPartLabel.grid(row=2, column=0, pady=(0, 5))
+        localPartLabel.grid(row=2, column=0, padx=50, pady=0, sticky="w")
 
-        localPartText = customtkinter.CTkLabel(master=self.tab("Single"), text="...",
-                                               font=("System", 12))
-        localPartText.grid(row=2, column=1, pady=(0, 5))
-
-        self.tab("Single").columnconfigure(0, weight=1)
-        self.tab("Single").columnconfigure(1, weight=1)
+        localPartText = customtkinter.CTkLabel(master=self.tab("Single"), text="...", font=("System", 12))
+        localPartText.grid(row=2, column=1, padx=5, pady=0, sticky="w")
 
         validLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="", text_color="red",
                                             font=("System", 14, "bold"))
