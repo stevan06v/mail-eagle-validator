@@ -5,6 +5,7 @@ import csv
 import threading
 from CTkListbox import *
 from tkinter import filedialog as fd
+from tkinter import ttk
 from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
 
@@ -173,9 +174,9 @@ class TabView(customtkinter.CTkTabview):
         optionmenu.set(",")
         optionmenu.grid(row=1, column=1, padx=10, pady=5)
 
-        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value)
+        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value,)
         listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=20, sticky="nsew")
-        listbox.configure(text_color="black")
+
 
         # submit-button
         buttonMultiple = customtkinter.CTkButton(master=self.tab("Multiple"), text="Validate", width=220, height=40,
