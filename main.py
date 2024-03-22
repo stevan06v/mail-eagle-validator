@@ -3,8 +3,10 @@ import customtkinter
 import os
 import threading
 from tkinter import filedialog as fd
+from email_validator import validate_email, caching_resolver, EmailNotValidError
 
-class MyTabView(customtkinter.CTkTabview):
+
+class TabView(customtkinter.CTkTabview):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
 
@@ -24,17 +26,73 @@ class MyTabView(customtkinter.CTkTabview):
                                              font=("System", 20, "bold"))
         singleLabel.place(relx=.5, rely=.05, anchor=tkinter.CENTER)
 
-        def submit():
-            email = emailInput.get()
-            print(email)
+        def mail_checker():
+            try:
+                errorMessageLabel.configure(text="")
+                resolver = caching_resolver(timeout=10)
+                emailInfo = validate_email(emailInput.get(), check_deliverability=True, dns_resolver=resolver)
+                print(emailInfo)  # Print the whole object
+
+                normalizedText.configure(text=emailInfo.normalized)
+                domainText.configure(text=emailInfo.domain)
+                localPartText.configure(text=emailInfo.local_part)
+
+                validLabel.configure(text="The provided email address is valid!", text_color="green")
+
+            except EmailNotValidError as e:
+
+                normalizedText.configure(text="")
+                domainText.configure(text="")
+                localPartText.configure(text="")
+
+                validLabel.configure(text="The provided email address is invalid!", text_color="red")
+                errorMessageLabel.configure(text=str(e))
 
         emailInput = customtkinter.CTkEntry(master=self.tab("Single"), width=300, height=40,
                                             placeholder_text="Email for validation")
         emailInput.place(relx=.5, rely=.2, anchor=tkinter.CENTER)
 
+        # Additional labels and fields for parameters in single tab
+        normalizedLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Normalized:", fg_color="transparent",
+                                                 font=("System", 12, "bold"))
+        normalizedLabel.grid(row=0, column=0, pady=(100, 5))
+
+        normalizedText = customtkinter.CTkLabel(master=self.tab("Single"), text="...",
+                                                font=("System", 12))
+        normalizedText.grid(row=0, column=1, pady=(100, 5))
+
+        # domain label
+        domainLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Domain:",
+                                             font=("System", 12, "bold"))
+        domainLabel.grid(row=1, column=0, pady=(0, 5))
+
+        domainText = customtkinter.CTkLabel(master=self.tab("Single"), text="...",
+                                            font=("System", 12))
+        domainText.grid(row=1, column=1, pady=(0, 5))
+
+        # localPart label
+        localPartLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Local part:", fg_color="transparent",
+                                                font=("System", 12, "bold"))
+        localPartLabel.grid(row=2, column=0, pady=(0, 5))
+
+        localPartText = customtkinter.CTkLabel(master=self.tab("Single"), text="...",
+                                               font=("System", 12))
+        localPartText.grid(row=2, column=1, pady=(0, 5))
+
+        self.tab("Single").columnconfigure(0, weight=1)
+        self.tab("Single").columnconfigure(1, weight=1)
+
+        validLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="", text_color="red",
+                                            font=("System", 14, "bold"))
+        validLabel.place(relx=.5, rely=.65, anchor=tkinter.CENTER)  # Place the button at the bottom
+
+        errorMessageLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="",
+                                                   font=("System", 12))
+        errorMessageLabel.place(relx=.5, rely=.72, anchor=tkinter.CENTER)  # Place the button at the bottom
+
         # submit-button
         button = customtkinter.CTkButton(master=self.tab("Single"), text="Validate", width=220, height=40,
-                                         command=submit)
+                                         command=mail_checker)
         button.place(relx=.5, rely=.9, anchor=tkinter.CENTER)  # Place the button at the bottom
 
         # tab "Multiple":
@@ -93,7 +151,7 @@ class App(customtkinter.CTk):
         self.maxsize(500, 500)
         self.minsize(500, 500)
 
-        self.tab_view = MyTabView(master=self)
+        self.tab_view = TabView(master=self)
         self.tab_view.place(relx=.5, rely=.5, anchor=tkinter.CENTER)
 
 

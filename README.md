@@ -19,7 +19,7 @@ bash ./setup-mac.sh
 python main.py
 ```
 
-
 ## Links
 
 * [Custom-TkInter](https://customtkinter.tomschimansky.com/documentation/)
+* [Email-Validator](https://pypi.org/project/py3-validate-email/1.0.59/)
