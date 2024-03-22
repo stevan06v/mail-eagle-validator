@@ -1,15 +1,35 @@
 import tkinter
 import customtkinter
 import os
+import csv
 import threading
+from CTkListbox import *
 from tkinter import filedialog as fd
 from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
+
+'''
+    ToDo: Michi konnst du do a table in dem windows anzeigen, welcher die mail validiert iwie ois columns 'blacklisted: true false... usw... anzeigt'
+    https://www.youtube.com/watch?v=jRpHmF-iuMI
+    bissl styling also so a anderes icon und a executable wär nice jojo.
+'''
+class ToplevelWindow(customtkinter.CTkToplevel):
+    def __init__(self, email="", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.geometry("400x300")
+
+        self.label_text = f"ToplevelWindow - Email: {email}"
+        self.label = customtkinter.CTkLabel(self, text=self.label_text)
+        self.label.pack(padx=20, pady=20)
+
 
 
 class TabView(customtkinter.CTkTabview):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
+
+        self.toplevel_window = None
 
         self.configure(width=400,
                        height=400)
@@ -98,16 +118,33 @@ class TabView(customtkinter.CTkTabview):
 
         # tab "Multiple":
         def submitMultiple():
-            print(emailInput.get())
+            read_csv_file(csvFilePathInput.get(), optionmenu.get())
 
         def openFileDialog():
-            name = fd.askopenfilename()
+            csvFilePathInput.delete(0, tkinter.END)
+
+            filetypes = [("CSV files", "*.csv")]
+            name = fd.askopenfilename(filetypes=filetypes)
             csvFilePathInput.insert(tkinter.END, name)
 
             print(csvFilePathInput.get())
 
-        def optionmenuCallback(choice):
-            print("optionmenu dropdown clicked:", choice)
+        def read_csv_file(file_path, delimiter):
+            listbox.delete("all")
+
+            with open(file_path, 'r') as file:
+                csv_reader = csv.reader(file, delimiter=delimiter)
+                for row in csv_reader:
+                    for index, item in enumerate(row):
+                        print(index, item)
+                        listbox.insert(index, item)
+
+        def show_value(selected_option):
+            if self.toplevel_window and self.toplevel_window.winfo_exists():
+                self.toplevel_window.destroy()
+
+            self.toplevel_window = ToplevelWindow(email=selected_option)
+            print(selected_option)
 
         # headline
         multipleLabel = customtkinter.CTkLabel(master=self.tab("Multiple"), text="Multiple-Validator",
@@ -132,9 +169,13 @@ class TabView(customtkinter.CTkTabview):
 
         # option menu
         optionmenu = customtkinter.CTkOptionMenu(master=self.tab("Multiple"), values=[",", ";"],
-                                                 command=optionmenuCallback, width=2, font=("System", 12))
+                                                 width=2, font=("System", 12))
         optionmenu.set(",")
         optionmenu.grid(row=1, column=1, padx=10, pady=5)
+
+        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value)
+        listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=20, sticky="nsew")
+        listbox.configure(text_color="black")
 
         # submit-button
         buttonMultiple = customtkinter.CTkButton(master=self.tab("Multiple"), text="Validate", width=220, height=40,
