@@ -296,6 +296,33 @@ class TabView(customtkinter.CTkTabview):
         
         # tab "Blacklist":
 
+        def load_blacklist():
+            try:
+                with open("blacklist.txt", "r") as f:
+                    blacklist_content = f.read()
+                    blacklistTextbox.delete("1.0", "end")  # Clear existing content
+                    blacklistTextbox.insert("1.0", blacklist_content)  # Insert content from file
+            except FileNotFoundError:
+                print("Die Blacklist-Datei wurde nicht gefunden.")
+
+        def save_blacklist():
+            blacklist_content = blacklistTextbox.get("1.0", "end-1c")  # Get all content except the trailing newline
+            with open("blacklist.txt", "w") as f:
+                f.write(blacklist_content)
+
+        blacklistTextbox = customtkinter.CTkTextbox(master=self.tab("Blacklist"))
+        blacklistTextbox = customtkinter.CTkTextbox(master=self.tab("Blacklist"), width=250, height=300)
+        blacklistTextbox.place(relx=.5, rely=.4, anchor=tkinter.CENTER)
+
+
+
+        loadButton = customtkinter.CTkButton(master=self.tab("Blacklist"), text="Load Blacklist",
+                                            command=load_blacklist)
+        loadButton.place(relx=.3, rely=.9, anchor=tkinter.CENTER)
+
+        saveButton = customtkinter.CTkButton(master=self.tab("Blacklist"), text="Save Blacklist",
+                                            command=save_blacklist)
+        saveButton.place(relx=.7, rely=.9, anchor=tkinter.CENTER)
 
 
 class App(customtkinter.CTk):
