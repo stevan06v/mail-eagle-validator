@@ -7,44 +7,60 @@ from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
 
 
-class EmailInfo:
-    def __init__(self, email, info):
-        self.email = email
-        self.info = info
-
-    def __str__(self):
-        return f"Email: {self.email}\nInfo: {self.info}"
-
-
 class SingleMailToplevelWindow(customtkinter.CTkToplevel):
     def __init__(self, email="", *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.geometry("400x300")
-        self.title(email + "-Validation")
-        self.maxsize(400, 300)
-        self.minsize(400, 300)
+        self.geometry("500x100")
+        self.title(f"{email}-Validation")
+        self.maxsize(500, 100)
+        self.minsize(500, 100)
 
-        self.label_text = f"ToplevelWindow - Email: {email}"
-        self.label = customtkinter.CTkLabel(self, text=self.label_text)
-        self.label.pack(padx=20, pady=5)
+        validLabel = customtkinter.CTkLabel(master=self, text_color="red",
+                                            font=("System", 14, "bold"))
+        validLabel.place(relx=.5, rely=.4, anchor=tkinter.CENTER)
+
+        errorMessageLabel = customtkinter.CTkLabel(master=self, text="",
+                                                   font=("System", 12))
+        errorMessageLabel.place(relx=.5, rely=.45, anchor=tkinter.CENTER)
+
+        def mail_checker():
+            try:
+                email_info = validate_email(email)
+                validLabel.configure(text="Valid email", text_color="green")
+
+                if email_info.domain in blocklist:
+                    validLabel.configure(text="Email found in Blacklist", text_color="red")
+
+            except EmailNotValidError as e:
+                validLabel.configure(text="Invalid email", text_color="red")
+                errorMessageLabel.configure(text=str(e))
+
+        mail_checker()
 
 
 class MailsListTopLevelWindow(customtkinter.CTkToplevel):
     def __init__(self, emails, title="", *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.toplevel_window = None
+
         self.geometry("400x300")
         self.title(title)
         self.maxsize(400, 300)
         self.minsize(400, 300)
+
+        def show_value(selected_option):
+            if self.toplevel_window and self.toplevel_window.winfo_exists():
+                self.toplevel_window.destroy()
+            self.toplevel_window = SingleMailToplevelWindow(email=selected_option)
 
         validLabel = customtkinter.CTkLabel(master=self, text=title,
                                             text_color="red" if title == "Invalid Emails" else "green",
                                             font=("System", 14, "bold"))
         validLabel.pack(padx=20, pady=10)
 
-        listbox = CTkListbox(self)
+        listbox = CTkListbox(self, command=show_value)
         listbox.delete("all")
         for index, email in enumerate(emails):
             listbox.insert(index, email)
@@ -66,6 +82,8 @@ class MailsListTopLevelWindow(customtkinter.CTkToplevel):
                     print("Export canceled.")
             except Exception as e:
                 print("Error exporting data:", e)
+
+
 
         # submit-button
         download_list = customtkinter.CTkButton(master=self, text="Download", width=220, height=40,
