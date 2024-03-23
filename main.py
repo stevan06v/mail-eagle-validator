@@ -29,7 +29,17 @@ class SingleMailToplevelWindow(customtkinter.CTkToplevel):
                 email_info = validate_email(email)
                 validLabel.configure(text="Valid email", text_color="green")
 
-                if email_info.domain in blocklist:
+                is_in_blocklist = email_info.domain in blocklist
+                
+                if not is_in_blocklist:
+                    try:
+                        with open("blacklist.txt", "r") as f:
+                            blacklist = f.read().splitlines()
+                            is_in_blocklist = email_info.domain in blacklist
+                    except FileNotFoundError:
+                        print("Die Blacklist-Datei wurde nicht gefunden.")
+                
+                if is_in_blocklist:
                     validLabel.configure(text="Email found in Blacklist", text_color="red")
 
             except EmailNotValidError as e:
@@ -103,6 +113,8 @@ class TabView(customtkinter.CTkTabview):
         # create tabs
         self.add("Single")
         self.add("Multiple")
+        self.add("Blacklist")
+
 
         self.tab("Single").configure(height=200, width=200)
 
@@ -124,6 +136,14 @@ class TabView(customtkinter.CTkTabview):
                 localPartText.configure(text=emailInfo.local_part)
 
                 is_in_blocklist = emailInfo.domain in blocklist
+
+                if not is_in_blocklist:
+                    try:
+                        with open("blacklist.txt", "r") as f:
+                            blacklist = f.read().splitlines()
+                            is_in_blocklist = emailInfo.domain in blacklist
+                    except FileNotFoundError:
+                        print("Die Blacklist-Datei wurde nicht gefunden.")
 
                 if is_in_blocklist is False:
                     validLabel.configure(text="The provided email address is valid!", text_color="green")
@@ -273,6 +293,9 @@ class TabView(customtkinter.CTkTabview):
         buttonMultiple = customtkinter.CTkButton(master=self.tab("Multiple"), text="Import", width=220, height=40,
                                                  command=import_data)
         buttonMultiple.place(relx=.5, rely=.9, anchor=tkinter.CENTER)  # Place the button at the bottom
+        
+        # tab "Blacklist":
+
 
 
 class App(customtkinter.CTk):
