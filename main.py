@@ -27,7 +27,7 @@ class SingleMailToplevelWindow(customtkinter.CTkToplevel):
 
         self.label_text = f"ToplevelWindow - Email: {email}"
         self.label = customtkinter.CTkLabel(self, text=self.label_text)
-        self.label.pack(padx=20, pady=20)
+        self.label.pack(padx=20, pady=5)
 
 
 class MailsListTopLevelWindow(customtkinter.CTkToplevel):
@@ -39,9 +39,38 @@ class MailsListTopLevelWindow(customtkinter.CTkToplevel):
         self.maxsize(400, 300)
         self.minsize(400, 300)
 
-        self.label_text = "ToplevelWindow - Invalid Mails"
-        self.label = customtkinter.CTkLabel(self, text=self.label_text)
-        self.label.pack(padx=20, pady=20)
+        validLabel = customtkinter.CTkLabel(master=self, text=title,
+                                            text_color="red" if title == "Invalid Emails" else "green",
+                                            font=("System", 14, "bold"))
+        validLabel.pack(padx=20, pady=10)
+
+        listbox = CTkListbox(self)
+        listbox.delete("all")
+        for index, email in enumerate(emails):
+            listbox.insert(index, email)
+
+        listbox.pack(fill="both", expand=True, padx=10, pady=10)
+
+        listbox.place(relx=.5, rely=.4, anchor=tkinter.CENTER, relwidth=.9, relheight=.4)
+
+        def export_data():
+            try:
+                filename = fd.asksaveasfilename(defaultextension=".csv",
+                                                filetypes=[("CSV files", "*.csv")])
+                if filename:
+                    with open(filename, 'w', newline='') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow(emails)
+                    print("Data exported successfully to", filename)
+                else:
+                    print("Export canceled.")
+            except Exception as e:
+                print("Error exporting data:", e)
+
+        # submit-button
+        download_list = customtkinter.CTkButton(master=self, text="Download", width=220, height=40,
+                                                command=export_data)
+        download_list.place(relx=.5, rely=.8, anchor=tkinter.CENTER)
 
 
 class TabView(customtkinter.CTkTabview):
@@ -49,6 +78,7 @@ class TabView(customtkinter.CTkTabview):
         super().__init__(master, **kwargs)
 
         self.toplevel_window = None
+        self.another_toplevel_window = None
 
         self.configure(width=400,
                        height=500)
@@ -174,22 +204,28 @@ class TabView(customtkinter.CTkTabview):
                     email_info = validate_email(email, check_deliverability=True, dns_resolver=resolver)
 
                     if email_info.domain in blocklist:
-                        info = EmailInfo(email_info.normalized, "blacklisted")
-                        invalid_emails.append(info)
+                        # info = EmailInfo(email_info.normalized, "blacklisted")
+                        invalid_emails.append(email)
                     else:
-                        info = EmailInfo(email_info.normalized, "valid")
-                        valid_emails.append(info)
+                        # info = EmailInfo(email_info.normalized, "valid")
+                        valid_emails.append(email)
 
                 except EmailNotValidError as e:
-                    info = EmailInfo(email, str(e))
-                    invalid_emails.append(info)
+                    # info = EmailInfo(email, str(e))
+                    invalid_emails.append(email)
 
+            # check if windows exist and destroy if they do
             if self.toplevel_window and self.toplevel_window.winfo_exists():
                 self.toplevel_window.destroy()
+
+            if self.another_toplevel_window and self.another_toplevel_window.winfo_exists():
+                self.another_toplevel_window.destroy()
+
+            # open windows
             if valid_emails:
-                self.toplevel_window = MailsListTopLevelWindow(emails=valid_emails, title="Valid Email")
+                self.toplevel_window = MailsListTopLevelWindow(emails=valid_emails, title="Valid Emails")
             if invalid_emails:
-                self.another_toplevel_window = MailsListTopLevelWindow(emails=invalid_emails, title="Invalid Email")
+                self.another_toplevel_window = MailsListTopLevelWindow(emails=invalid_emails, title="Invalid Emails")
 
         # headline
         multipleLabel = customtkinter.CTkLabel(master=self.tab("Multiple"), text="Multiple-Validator",
