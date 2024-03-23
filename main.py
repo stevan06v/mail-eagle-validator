@@ -76,14 +76,13 @@ class MailsListTopLevelWindow(customtkinter.CTkToplevel):
                 if filename:
                     with open(filename, 'w', newline='') as csvfile:
                         writer = csv.writer(csvfile)
-                        writer.writerow(emails)
+                        for email in emails:
+                            writer.writerow([email])
                     print("Data exported successfully to", filename)
                 else:
                     print("Export canceled.")
             except Exception as e:
                 print("Error exporting data:", e)
-
-
 
         # submit-button
         download_list = customtkinter.CTkButton(master=self, text="Download", width=220, height=40,
@@ -185,7 +184,7 @@ class TabView(customtkinter.CTkTabview):
 
         # tab "Multiple":
         def import_data():
-            read_csv_file(csvFilePathInput.get(), optionmenu.get())
+            read_csv_file(csvFilePathInput.get())
 
         def openFileDialog():
             csvFilePathInput.delete(0, tkinter.END)
@@ -196,15 +195,16 @@ class TabView(customtkinter.CTkTabview):
 
             print(csvFilePathInput.get())
 
-        def read_csv_file(file_path, delimiter):
+        def read_csv_file(file_path):
             listbox.delete("all")
 
             with open(file_path, 'r') as file:
-                csv_reader = csv.reader(file, delimiter=delimiter)
-                for row in csv_reader:
-                    for index, item in enumerate(row):
-                        print(index, item)
-                        listbox.insert(index, item)
+                csv_reader = csv.reader(file)
+                # next(csv_reader)
+                for index, row in enumerate(csv_reader):
+                    email = row[0]
+                    print(index, email)
+                    listbox.insert(index, email)
 
         def show_value(selected_option):
             if self.toplevel_window and self.toplevel_window.winfo_exists():
@@ -261,18 +261,7 @@ class TabView(customtkinter.CTkTabview):
                                                  font=("System", 12))
         openFileDialog.grid(row=0, column=1, padx=5, pady=(50, 10))
 
-        # option menu label
-        optionMenuLabel = customtkinter.CTkLabel(master=self.tab("Multiple"), text="Delimiter:", fg_color="transparent",
-                                                 font=("System", 12))
-        optionMenuLabel.grid(row=1, column=0, padx=10, pady=5)
-
-        # option menu
-        optionmenu = customtkinter.CTkOptionMenu(master=self.tab("Multiple"), values=[",", ";"],
-                                                 width=2, font=("System", 12))
-        optionmenu.set(",")
-        optionmenu.grid(row=1, column=1, padx=10, pady=5)
-
-        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value, )
+        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value, height=180, width=50)
         listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=20, sticky="nsew")
 
         # submit-button
