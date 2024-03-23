@@ -7,14 +7,39 @@ from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
 
 
-class ToplevelWindow(customtkinter.CTkToplevel):
+class EmailInfo:
+    def __init__(self, email, info):
+        self.email = email
+        self.info = info
+
+    def __str__(self):
+        return f"Email: {self.email}\nInfo: {self.info}"
+
+
+class SingleMailToplevelWindow(customtkinter.CTkToplevel):
     def __init__(self, email="", *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.geometry("400x300")
+        self.title(email + "-Validation")
         self.maxsize(400, 300)
         self.minsize(400, 300)
 
         self.label_text = f"ToplevelWindow - Email: {email}"
+        self.label = customtkinter.CTkLabel(self, text=self.label_text)
+        self.label.pack(padx=20, pady=20)
+
+
+class MailsListTopLevelWindow(customtkinter.CTkToplevel):
+    def __init__(self, emails, title="", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.geometry("400x300")
+        self.title(title)
+        self.maxsize(400, 300)
+        self.minsize(400, 300)
+
+        self.label_text = "ToplevelWindow - Invalid Mails"
         self.label = customtkinter.CTkLabel(self, text=self.label_text)
         self.label.pack(padx=20, pady=20)
 
@@ -26,7 +51,7 @@ class TabView(customtkinter.CTkTabview):
         self.toplevel_window = None
 
         self.configure(width=400,
-                       height=400)
+                       height=500)
 
         # create tabs
         self.add("Single")
@@ -77,10 +102,10 @@ class TabView(customtkinter.CTkTabview):
         # Additional labels and fields for parameters in single tab
         normalizedLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Normalized:", fg_color="transparent",
                                                  font=("System", 12, "bold"))
-        normalizedLabel.grid(row=0, column=0, padx=50, pady=(100, 0), sticky="w")
+        normalizedLabel.grid(row=0, column=0, padx=50, pady=(140, 0), sticky="w")
 
         normalizedText = customtkinter.CTkLabel(master=self.tab("Single"), text="...", font=("System", 12))
-        normalizedText.grid(row=0, column=1, padx=5, pady=(100, 0), sticky="w")
+        normalizedText.grid(row=0, column=1, padx=5, pady=(140, 0), sticky="w")
 
         # domain label
         domainLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Domain:", font=("System", 12, "bold"))
@@ -111,7 +136,7 @@ class TabView(customtkinter.CTkTabview):
         button.place(relx=.5, rely=.9, anchor=tkinter.CENTER)  # Place the button at the bottom
 
         # tab "Multiple":
-        def submitMultiple():
+        def import_data():
             read_csv_file(csvFilePathInput.get(), optionmenu.get())
 
         def openFileDialog():
@@ -136,9 +161,35 @@ class TabView(customtkinter.CTkTabview):
         def show_value(selected_option):
             if self.toplevel_window and self.toplevel_window.winfo_exists():
                 self.toplevel_window.destroy()
+            self.toplevel_window = SingleMailToplevelWindow(email=selected_option)
 
-            self.toplevel_window = ToplevelWindow(email=selected_option)
-            print(selected_option)
+        def validate_all():
+            emails = listbox.get("all")
+            invalid_emails = []
+            valid_emails = []
+
+            for email in emails:
+                try:
+                    resolver = caching_resolver(timeout=10)
+                    email_info = validate_email(email, check_deliverability=True, dns_resolver=resolver)
+
+                    if email_info.domain in blocklist:
+                        info = EmailInfo(email_info.normalized, "blacklisted")
+                        invalid_emails.append(info)
+                    else:
+                        info = EmailInfo(email_info.normalized, "valid")
+                        valid_emails.append(info)
+
+                except EmailNotValidError as e:
+                    info = EmailInfo(email, str(e))
+                    invalid_emails.append(info)
+
+            if self.toplevel_window and self.toplevel_window.winfo_exists():
+                self.toplevel_window.destroy()
+            if valid_emails:
+                self.toplevel_window = MailsListTopLevelWindow(emails=valid_emails, title="Valid Email")
+            if invalid_emails:
+                self.another_toplevel_window = MailsListTopLevelWindow(emails=invalid_emails, title="Invalid Email")
 
         # headline
         multipleLabel = customtkinter.CTkLabel(master=self.tab("Multiple"), text="Multiple-Validator",
@@ -171,8 +222,13 @@ class TabView(customtkinter.CTkTabview):
         listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=20, sticky="nsew")
 
         # submit-button
+        validateAllButton = customtkinter.CTkButton(master=self.tab("Multiple"), text="Validate",
+                                                    command=validate_all)
+        validateAllButton.grid(row=3, column=0, columnspan=1, padx=(50, 10), pady=5, sticky="nsew")
+
+        # submit-button
         buttonMultiple = customtkinter.CTkButton(master=self.tab("Multiple"), text="Import", width=220, height=40,
-                                                 command=submitMultiple)
+                                                 command=import_data)
         buttonMultiple.place(relx=.5, rely=.9, anchor=tkinter.CENTER)  # Place the button at the bottom
 
 
@@ -181,10 +237,10 @@ class App(customtkinter.CTk):
         super().__init__()
 
         self.title("Email-Validator")
-        self.geometry("500x500")
+        self.geometry("500x600")
 
-        self.maxsize(500, 500)
-        self.minsize(500, 500)
+        self.maxsize(500, 600)
+        self.minsize(500, 600)
 
         self.tab_view = TabView(master=self)
         self.tab_view.place(relx=.5, rely=.5, anchor=tkinter.CENTER)
