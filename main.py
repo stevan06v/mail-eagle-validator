@@ -30,7 +30,7 @@ class SingleMailToplevelWindow(customtkinter.CTkToplevel):
                 validLabel.configure(text="Valid email", text_color="green")
 
                 is_in_blocklist = email_info.domain in blocklist
-                
+
                 if not is_in_blocklist:
                     try:
                         with open("blacklist.txt", "r") as f:
@@ -38,7 +38,7 @@ class SingleMailToplevelWindow(customtkinter.CTkToplevel):
                             is_in_blocklist = email_info.domain in blacklist
                     except FileNotFoundError:
                         print("Die Blacklist-Datei wurde nicht gefunden.")
-                
+
                 if is_in_blocklist:
                     validLabel.configure(text="Email found in Blacklist", text_color="red")
 
@@ -114,7 +114,6 @@ class TabView(customtkinter.CTkTabview):
         self.add("Single")
         self.add("Multiple")
         self.add("Blacklist")
-
 
         self.tab("Single").configure(height=200, width=200)
 
@@ -235,13 +234,22 @@ class TabView(customtkinter.CTkTabview):
             emails = listbox.get("all")
             invalid_emails = []
             valid_emails = []
+            blacklist = []
+
+            try:
+                with open("blacklist.txt", "r") as f:
+                    blacklist = f.read().splitlines()
+            except FileNotFoundError:
+                print("Die Blacklist-Datei wurde nicht gefunden.")
+
+            print(blacklist)
 
             for email in emails:
                 try:
                     resolver = caching_resolver(timeout=10)
                     email_info = validate_email(email, check_deliverability=True, dns_resolver=resolver)
 
-                    if email_info.domain in blocklist:
+                    if email_info.domain in blocklist or email_info.domain in blacklist:
                         # info = EmailInfo(email_info.normalized, "blacklisted")
                         invalid_emails.append(email)
                     else:
@@ -293,7 +301,7 @@ class TabView(customtkinter.CTkTabview):
         buttonMultiple = customtkinter.CTkButton(master=self.tab("Multiple"), text="Import", width=220, height=40,
                                                  command=import_data)
         buttonMultiple.place(relx=.5, rely=.9, anchor=tkinter.CENTER)  # Place the button at the bottom
-        
+
         # tab "Blacklist":
 
         def load_blacklist():
@@ -314,14 +322,12 @@ class TabView(customtkinter.CTkTabview):
         blacklistTextbox = customtkinter.CTkTextbox(master=self.tab("Blacklist"), width=250, height=300)
         blacklistTextbox.place(relx=.5, rely=.4, anchor=tkinter.CENTER)
 
-
-
         loadButton = customtkinter.CTkButton(master=self.tab("Blacklist"), text="Load Blacklist",
-                                            command=load_blacklist)
+                                             command=load_blacklist)
         loadButton.place(relx=.3, rely=.9, anchor=tkinter.CENTER)
 
         saveButton = customtkinter.CTkButton(master=self.tab("Blacklist"), text="Save Blacklist",
-                                            command=save_blacklist)
+                                             command=save_blacklist)
         saveButton.place(relx=.7, rely=.9, anchor=tkinter.CENTER)
 
 
