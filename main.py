@@ -1,29 +1,22 @@
 import tkinter
 import customtkinter
-import os
 import csv
-import threading
 from CTkListbox import *
 from tkinter import filedialog as fd
-from tkinter import ttk
 from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
 
-'''
-    ToDo: Michi konnst du do a table in dem windows anzeigen, welcher die mail validiert iwie ois columns 'blacklisted: true false... usw... anzeigt'
-    https://www.youtube.com/watch?v=jRpHmF-iuMI
-    bissl styling also so a anderes icon und a executable wär nice jojo.
-'''
+
 class ToplevelWindow(customtkinter.CTkToplevel):
     def __init__(self, email="", *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.geometry("400x300")
+        self.maxsize(400, 300)
+        self.minsize(400, 300)
 
         self.label_text = f"ToplevelWindow - Email: {email}"
         self.label = customtkinter.CTkLabel(self, text=self.label_text)
         self.label.pack(padx=20, pady=20)
-
 
 
 class TabView(customtkinter.CTkTabview):
@@ -174,12 +167,11 @@ class TabView(customtkinter.CTkTabview):
         optionmenu.set(",")
         optionmenu.grid(row=1, column=1, padx=10, pady=5)
 
-        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value,)
+        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value, )
         listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=20, sticky="nsew")
 
-
         # submit-button
-        buttonMultiple = customtkinter.CTkButton(master=self.tab("Multiple"), text="Validate", width=220, height=40,
+        buttonMultiple = customtkinter.CTkButton(master=self.tab("Multiple"), text="Import", width=220, height=40,
                                                  command=submitMultiple)
         buttonMultiple.place(relx=.5, rely=.9, anchor=tkinter.CENTER)  # Place the button at the bottom
 
