@@ -292,6 +292,7 @@ class TabView(customtkinter.CTkTabview):
             self.toplevel_window = SingleMailToplevelWindow(email=selected_option)
 
         def validate_all():
+            dns_check = switch.get()
 
             global thread_count
             global email_list
@@ -308,7 +309,7 @@ class TabView(customtkinter.CTkTabview):
                 print("Die Blacklist-Datei wurde nicht gefunden.")
 
             for i in range(0, thread_count):
-                thread = threading.Thread(target=validate_chunked_list, args=(email_list[i],))
+                thread = threading.Thread(target=validate_chunked_list, args=(email_list[i], dns_check,))
                 jobs.append(thread)
 
             for j in jobs:
@@ -334,12 +335,11 @@ class TabView(customtkinter.CTkTabview):
             if invalid_emails:
                 self.another_toplevel_window = MailsListTopLevelWindow(emails=invalid_emails, title="Invalid Emails")
 
-        def validate_chunked_list(chunked_emails):
+        def validate_chunked_list(chunked_emails, check_dns):
             global black_list
-
+            resolver = caching_resolver(timeout=10) if check_dns else False
             for email in chunked_emails:
                 try:
-                    resolver = caching_resolver(timeout=10)
                     email_info = validate_email(email, check_deliverability=resolver)
                     if email_info.domain in blocklist or email_info.domain in black_list:
                         invalid_emails.add(email)
@@ -365,13 +365,13 @@ class TabView(customtkinter.CTkTabview):
                                                  font=("System", 12))
         openFileDialog.grid(row=0, column=1, padx=5, pady=(50, 10))
 
-        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value, height=130, width=50)
-        listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=20, sticky="nsew")
+        switch = customtkinter.CTkSwitch(self.tab("Multiple"), text="DNS-Check",
+                                         onvalue=True, offvalue=False)
 
-        progressbar = customtkinter.CTkProgressBar(master=self.tab("Multiple"), orientation="horizontal", height=10,
-                                                   width=250)
-        progressbar.place(relx=.5, rely=.77, anchor=tkinter.CENTER)
-        progressbar.configure(mode="indeterminate")
+        switch.grid(row=1, column=0, padx=15)
+
+        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value, height=180, width=50)
+        listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=10, sticky="nsew")
 
         # submit-button
         validateAllButton = customtkinter.CTkButton(master=self.tab("Multiple"), text="Validate",
