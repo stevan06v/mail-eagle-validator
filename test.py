@@ -1,14 +1,7 @@
-import random
-import string
+def split_into_chunks(lst, num_chunks):
+    chunk_size = (len(lst) + num_chunks - 1) // num_chunks
+    chunks = [lst[i:i+chunk_size] for i in range(0, len(lst), chunk_size)]
+    return chunks
 
-def generate_email():
-    domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com']
-    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=random.randint(5, 10)))
-    domain = random.choice(domains)
-    return f"{username}@{domain}"
+print(split_into_chunks(["hello", "world","fs", "fadf", "...", "dffa","fdfsafds", "afdsa"], 5))
 
-email_list = [generate_email() for _ in range(200)]
-
-# Print the generated email addresses
-for email in email_list:
-    print(email)

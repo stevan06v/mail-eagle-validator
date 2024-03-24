@@ -1,5 +1,6 @@
 import queue
 import threading
+import time
 import tkinter
 import customtkinter
 import csv
@@ -7,6 +8,13 @@ from CTkListbox import *
 from tkinter import filedialog as fd
 from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
+
+email_list = []
+invalid_emails = set()
+valid_emails = set()
+black_list = list()
+thread_count = 8
+show_email_count = 500
 
 
 class SingleMailToplevelWindow(customtkinter.CTkToplevel):
@@ -74,6 +82,7 @@ class MailsListTopLevelWindow(customtkinter.CTkToplevel):
 
         listbox = CTkListbox(self, command=show_value)
         listbox.delete("all")
+
         for index, email in enumerate(emails):
             listbox.insert(index, email)
 
@@ -217,19 +226,37 @@ class TabView(customtkinter.CTkTabview):
             print(csvFilePathInput.get())
 
         def read_csv_file(file_path):
+
+            global email_list
+            global thread_count
+            global show_email_count
+
             listbox.delete("all")
 
             with open(file_path, 'r') as file:
-                csv_reader = csv.reader(file)
+                csv_reader = csv.reader(file, delimiter=';')
 
-                thread_count = 4
-                emails = list(csv_reader)
+                # skip head
+                next(csv_reader, None)
 
-                chunked_list = split_into_chunks(emails, thread_count)
+                csv_reader_list = list(csv_reader)
 
-                # Create a queue for communication between threads
+                # parse into set
+                emails = list()
+
+                for row in csv_reader_list:
+                    if row:
+                        emails.append(row[0])
+
+                # assign to global list
+                email_list = split_into_chunks(emails, thread_count)
+
+                # chunk emails that are rendered in the ui
+                show_emails = emails[:show_email_count]
+
+                chunked_list = split_into_chunks(show_emails, thread_count)
+
                 queue_for_insert = queue.Queue()
-
                 jobs = []
 
                 for i in range(0, thread_count):
@@ -245,11 +272,9 @@ class TabView(customtkinter.CTkTabview):
                 # Retrieve items from the queue and insert them into the UI
                 while not queue_for_insert.empty():
                     index, row = queue_for_insert.get()
-
-                    print(index, row)
                     listbox.insert(index, row)
 
-                print(len(listbox.get("all")))
+                print("finished rendering values to listbox...")
 
         def insert_operation(emails, curr_list, queue_for_insert):
             for index, row in enumerate(emails):
@@ -257,14 +282,8 @@ class TabView(customtkinter.CTkTabview):
                     queue_for_insert.put((index + (len(emails) * curr_list), row))  # Adjust index
 
         def split_into_chunks(lst, num_chunks):
-            avg_chunk_size = len(lst) / num_chunks
-            chunks = []
-            last = 0.0
-
-            while last < len(lst):
-                chunks.append([item for sublist in lst[int(last):int(last + avg_chunk_size)] for item in sublist])
-                last += avg_chunk_size
-
+            chunk_size = (len(lst) + num_chunks - 1) // num_chunks
+            chunks = [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
             return chunks
 
         def show_value(selected_option):
@@ -273,34 +292,34 @@ class TabView(customtkinter.CTkTabview):
             self.toplevel_window = SingleMailToplevelWindow(email=selected_option)
 
         def validate_all():
-            emails = listbox.get("all")
-            invalid_emails = []
-            valid_emails = []
-            blacklist = []
+
+            global thread_count
+            global email_list
+            global invalid_emails
+            global valid_emails
+            global black_list
+
+            jobs = []
 
             try:
                 with open("blacklist.txt", "r") as f:
-                    blacklist = f.read().splitlines()
+                    black_list = f.read().splitlines()
             except FileNotFoundError:
                 print("Die Blacklist-Datei wurde nicht gefunden.")
 
-            print(blacklist)
+            for i in range(0, thread_count):
+                thread = threading.Thread(target=validate_chunked_list, args=(email_list[i],))
+                jobs.append(thread)
 
-            for email in emails:
-                try:
-                    resolver = caching_resolver(timeout=10)
-                    email_info = validate_email(email, check_deliverability=True, dns_resolver=resolver)
+            for j in jobs:
+                j.start()
 
-                    if email_info.domain in blocklist or email_info.domain in blacklist:
-                        # info = EmailInfo(email_info.normalized, "blacklisted")
-                        invalid_emails.append(email)
-                    else:
-                        # info = EmailInfo(email_info.normalized, "valid")
-                        valid_emails.append(email)
+            for j in jobs:
+                j.join()
 
-                except EmailNotValidError as e:
-                    # info = EmailInfo(email, str(e))
-                    invalid_emails.append(email)
+            print("validated successfully")
+
+            print(len(valid_emails))
 
             # check if windows exist and destroy if they do
             if self.toplevel_window and self.toplevel_window.winfo_exists():
@@ -314,6 +333,21 @@ class TabView(customtkinter.CTkTabview):
                 self.toplevel_window = MailsListTopLevelWindow(emails=valid_emails, title="Valid Emails")
             if invalid_emails:
                 self.another_toplevel_window = MailsListTopLevelWindow(emails=invalid_emails, title="Invalid Emails")
+
+        def validate_chunked_list(chunked_emails):
+            global black_list
+
+            for email in chunked_emails:
+                try:
+                    resolver = caching_resolver(timeout=10)
+                    email_info = validate_email(email, check_deliverability=resolver)
+                    if email_info.domain in blocklist or email_info.domain in black_list:
+                        invalid_emails.add(email)
+                    else:
+                        valid_emails.add(email)
+                except EmailNotValidError as e:
+                    invalid_emails.add(email)
+                print(f"{email} processed...")
 
         # headline
         multipleLabel = customtkinter.CTkLabel(master=self.tab("Multiple"), text="Multiple-Validator",
@@ -331,8 +365,13 @@ class TabView(customtkinter.CTkTabview):
                                                  font=("System", 12))
         openFileDialog.grid(row=0, column=1, padx=5, pady=(50, 10))
 
-        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value, height=180, width=50)
+        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value, height=130, width=50)
         listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=20, sticky="nsew")
+
+        progressbar = customtkinter.CTkProgressBar(master=self.tab("Multiple"), orientation="horizontal", height=10,
+                                                   width=250)
+        progressbar.place(relx=.5, rely=.77, anchor=tkinter.CENTER)
+        progressbar.configure(mode="indeterminate")
 
         # submit-button
         validateAllButton = customtkinter.CTkButton(master=self.tab("Multiple"), text="Validate",
