@@ -13,7 +13,8 @@ email_list = []
 invalid_emails = []
 valid_emails = []
 black_list = list()
-thread_count = 8
+checked_domains = []
+thread_count = 100
 show_email_count = 500
 validation_thread = None
 stop_validation_flag = threading.Event()
@@ -148,19 +149,19 @@ class TabView(customtkinter.CTkTabview):
             try:
                 errorMessageLabel.configure(text="")
                 resolver = caching_resolver(timeout=10)
-                emailInfo = validate_email(emailInput.get(), check_deliverability=True, dns_resolver=resolver)
+                email_info = validate_email(emailInput.get(), check_deliverability=True, dns_resolver=resolver)
 
-                normalizedText.configure(text=emailInfo.normalized)
-                domainText.configure(text=emailInfo.domain)
-                localPartText.configure(text=emailInfo.local_part)
+                normalizedText.configure(text=email_info.normalized)
+                domainText.configure(text=email_info.domain)
+                localPartText.configure(text=email_info.local_part)
 
-                is_in_blocklist = emailInfo.domain in blocklist
+                is_in_blocklist = email_info.domain in blocklist
 
                 if not is_in_blocklist:
                     try:
                         with open("blacklist.txt", "r") as f:
                             blacklist = f.read().splitlines()
-                            is_in_blocklist = emailInfo.domain in blacklist
+                            is_in_blocklist = email_info.domain in blacklist
                     except FileNotFoundError:
                         print("Die Blacklist-Datei wurde nicht gefunden.")
 
@@ -367,21 +368,35 @@ class TabView(customtkinter.CTkTabview):
                 self.another_toplevel_window = MailsListTopLevelWindow(emails=invalid_emails, title="Invalid Emails")
 
         def validate_chunked_list(chunked_emails, check_dns):
-            global black_list
-            resolver = caching_resolver(timeout=10) if check_dns else False
+            global black_list, checked_domains
+
             for index, email in enumerate(chunked_emails):
                 if stop_validation_flag.is_set():
                     print("Validation stopped.")
                     return
+
+                # Set resolver based on whether the domain has been checked previously
+                resolver = caching_resolver(timeout=8) if check_dns and email.split('@')[-1] not in checked_domains else False
+                if email.split('@')[-1] in black_list:
+                    invalid_emails.append(email)
+                    return
                 try:
-                    email_info = validate_email(email, check_deliverability=resolver)
-                    if email_info.domain in blocklist or email_info.domain in black_list:
+                    email_info = validate_email(email, check_deliverability=True, dns_resolver=resolver)
+                    # Add the email domain to the checked domains set if resolver is True
+                    if resolver:
+                        checked_domains.append(email_info.domain)
+
+                    if email_info.domain in black_list:
                         invalid_emails.append(email)
                     else:
                         valid_emails.append(email)
                 except EmailNotValidError as e:
                     invalid_emails.append(email)
+                    if "deliverable" in str(e).lower() or "dns" in str(e).lower() or "unresolved" in str(e).lower() or "not existing" in str(e).lower():
+                        black_list.append(email.split('@')[-1])  # Add domain to blacklist if delivery failure or DNS-related error
+                
                 print(index, email)
+
 
         # headline
         multipleLabel = customtkinter.CTkLabel(master=self.tab("Multiple"), text="Multiple-Validator",
