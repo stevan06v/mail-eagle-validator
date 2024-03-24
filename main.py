@@ -1,3 +1,5 @@
+import queue
+import threading
 import tkinter
 import customtkinter
 import csv
@@ -219,11 +221,51 @@ class TabView(customtkinter.CTkTabview):
 
             with open(file_path, 'r') as file:
                 csv_reader = csv.reader(file)
-                # next(csv_reader)
-                for index, row in enumerate(csv_reader):
-                    email = row[0]
-                    print(index, email)
-                    listbox.insert(index, email)
+
+                thread_count = 4
+                emails = list(csv_reader)
+
+                chunked_list = split_into_chunks(emails, thread_count)
+
+                # Create a queue for communication between threads
+                queue_for_insert = queue.Queue()
+
+                jobs = []
+
+                for i in range(0, thread_count):
+                    thread = threading.Thread(target=insert_operation, args=(chunked_list[i], i + 1, queue_for_insert))
+                    jobs.append(thread)
+
+                for j in jobs:
+                    j.start()
+
+                for j in jobs:
+                    j.join()
+
+                # Retrieve items from the queue and insert them into the UI
+                while not queue_for_insert.empty():
+                    index, row = queue_for_insert.get()
+
+                    print(index, row)
+                    listbox.insert(index, row)
+
+                print(len(listbox.get("all")))
+
+        def insert_operation(emails, curr_list, queue_for_insert):
+            for index, row in enumerate(emails):
+                if row:
+                    queue_for_insert.put((index + (len(emails) * curr_list), row))  # Adjust index
+
+        def split_into_chunks(lst, num_chunks):
+            avg_chunk_size = len(lst) / num_chunks
+            chunks = []
+            last = 0.0
+
+            while last < len(lst):
+                chunks.append([item for sublist in lst[int(last):int(last + avg_chunk_size)] for item in sublist])
+                last += avg_chunk_size
+
+            return chunks
 
         def show_value(selected_option):
             if self.toplevel_window and self.toplevel_window.winfo_exists():
