@@ -14,7 +14,7 @@ invalid_emails = []
 valid_emails = []
 black_list = list()
 checked_domains = []
-thread_count = 100
+thread_count = 32
 show_email_count = 500
 validation_thread = None
 stop_validation_flag = threading.Event()
@@ -311,6 +311,7 @@ class TabView(customtkinter.CTkTabview):
                 validation_thread.start()
 
         def stop_validation():
+            validateAllButton.configure(text="Validate", state=tkinter.ACTIVE)
             global stop_validation_flag
             stop_validation_flag.set()
 
