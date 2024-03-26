@@ -173,6 +173,7 @@ class TabView(customtkinter.CTkTabview):
         singleLabel.place(relx=.5, rely=.05, anchor=tkinter.CENTER)
 
         def mail_checker():
+            global black_list
             try:
                 errorMessageLabel.configure(text="")
                 resolver = caching_resolver(timeout=10)
@@ -182,7 +183,7 @@ class TabView(customtkinter.CTkTabview):
                 domainText.configure(text=email_info.domain)
                 localPartText.configure(text=email_info.local_part)
 
-                is_in_blocklist = email_info.domain in blocklist
+                is_in_blocklist = email_info.domain in blocklist or email_info.domain in blocklist
 
                 if not is_in_blocklist:
                     try:
