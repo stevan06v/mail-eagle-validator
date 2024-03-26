@@ -103,7 +103,6 @@ class MailsListTopLevelWindow(customtkinter.CTkToplevel):
                                             font=("System", 14, "bold"))
         validLabel.pack(padx=20, pady=10)
 
-
         listbox = CTkListbox(self, command=show_value)
         listbox.delete("all")
 
@@ -204,6 +203,9 @@ class TabView(customtkinter.CTkTabview):
                 validLabel.configure(text="The provided email address is invalid!", text_color="red")
                 errorMessageLabel.configure(text=str(e))
 
+        def mail_checker_async():
+            threading.Thread(target=mail_checker(), daemon=True).start()
+
         textbox = customtkinter.CTkTextbox(master=self.tab("Single"))
         textbox.insert("0.0", "new text to insert")  # insert at line 0 character 0
 
@@ -244,7 +246,7 @@ class TabView(customtkinter.CTkTabview):
 
         # submit-button
         button = customtkinter.CTkButton(master=self.tab("Single"), text="Validate", width=220, height=40,
-                                         command=mail_checker)
+                                         command=mail_checker_async)
         button.place(relx=.5, rely=.9, anchor=tkinter.CENTER)  # Place the button at the bottom
 
         # tab "Multiple":
