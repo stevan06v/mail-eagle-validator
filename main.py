@@ -20,6 +20,20 @@ validation_thread = None
 stop_validation_flag = threading.Event()
 
 
+class NotificationTopLevelWindow(customtkinter.CTkToplevel):
+    def __init__(self, message="", valid=True, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.geometry("200x50")
+
+        self.maxsize(200, 50)
+        self.minsize(200, 50)
+        self.title("Success" if valid else "Error")
+
+        message_label = customtkinter.CTkLabel(master=self, text=message,
+                                               font=("System", 12, "bold"), text_color="green" if valid else "red")
+        message_label.place(relx=.5, rely=.45, anchor=tkinter.CENTER)
+
+
 class SingleMailToplevelWindow(customtkinter.CTkToplevel):
     def __init__(self, email="", *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -127,6 +141,7 @@ class TabView(customtkinter.CTkTabview):
 
         self.toplevel_window = None
         self.another_toplevel_window = None
+        self.notification_toplevel_window = None
 
         self.configure(width=400,
                        height=500)
@@ -137,6 +152,12 @@ class TabView(customtkinter.CTkTabview):
         self.add("Blacklist")
 
         self.tab("Single").configure(height=200, width=200)
+
+        def open_notification_toplevel(message, success):
+            if self.notification_toplevel_window is None or not self.notification_toplevel_window.winfo_exists():
+                self.notification_toplevel_window = NotificationTopLevelWindow(message, success)
+            else:
+                self.notification_toplevel_window.focus()
 
         # tab "Single":
 
@@ -241,6 +262,7 @@ class TabView(customtkinter.CTkTabview):
             global thread_count
             global show_email_count
 
+            email_list = []
             listbox.delete("all")
 
             with open(file_path, 'r') as file:
@@ -260,6 +282,11 @@ class TabView(customtkinter.CTkTabview):
 
                 # assign to global list
                 email_list = split_into_chunks(emails, thread_count)
+
+                if email_list:
+                    open_notification_toplevel("Successfully imported emails!", True)
+                else:
+                    open_notification_toplevel("Error while handling the email-list!", False)
 
                 # chunk emails that are rendered in the ui
                 show_emails = emails[:show_email_count]
@@ -319,18 +346,20 @@ class TabView(customtkinter.CTkTabview):
             global stop_validation_flag
             stop_validation_flag.clear()
 
+        def reset_lists():
+            global invalid_emails, valid_emails, checked_domains
+            valid_emails = []
+            invalid_emails = []
+
         def validate_all():
             dns_check = switch.get()
 
             # Reset stop flag before starting validation
             reset_stop_validation_flag()
 
-            global thread_count
-            global email_list
-            global invalid_emails
-            global valid_emails
-            global black_list
+            global thread_count, email_list, black_list
 
+            reset_lists()
             jobs = []
 
             try:
@@ -351,6 +380,8 @@ class TabView(customtkinter.CTkTabview):
                 j.join()
 
             update_ui()
+            print(f"Valid: {len(valid_emails)}")
+            print(f"Invalid: {len(invalid_emails)}")
 
         def update_ui():
             validateAllButton.configure(text="Validate", state=tkinter.ACTIVE)
@@ -364,40 +395,59 @@ class TabView(customtkinter.CTkTabview):
 
             # open windows
             if valid_emails:
+                print("valid opened")
                 self.toplevel_window = MailsListTopLevelWindow(emails=valid_emails, title="Valid Emails")
             if invalid_emails:
+                print("invalid opened")
                 self.another_toplevel_window = MailsListTopLevelWindow(emails=invalid_emails, title="Invalid Emails")
 
         def validate_chunked_list(chunked_emails, check_dns):
-            global black_list, checked_domains
+            global black_list, checked_domains, invalid_emails, valid_emails
 
-            for index, email in enumerate(chunked_emails):
-                if stop_validation_flag.is_set():
-                    print("Validation stopped.")
-                    return
+            if check_dns:
+                for index, email in enumerate(chunked_emails):
+                    if stop_validation_flag.is_set():
+                        print("Validation stopped.")
+                        return
+                    # Set resolver based on whether the domain has been checked previously
+                    resolver = caching_resolver(timeout=10) if check_dns and email.split('@')[
+                        -1] not in checked_domains else False
 
-                # Set resolver based on whether the domain has been checked previously
-                resolver = caching_resolver(timeout=8) if check_dns and email.split('@')[-1] not in checked_domains else False
-                if email.split('@')[-1] in black_list:
-                    invalid_emails.append(email)
-                    return
-                try:
-                    email_info = validate_email(email, check_deliverability=True, dns_resolver=resolver)
-                    # Add the email domain to the checked domains set if resolver is True
-                    if resolver:
-                        checked_domains.append(email_info.domain)
-
-                    if email_info.domain in black_list:
+                    if email.split('@')[-1] in black_list:
                         invalid_emails.append(email)
-                    else:
-                        valid_emails.append(email)
-                except EmailNotValidError as e:
-                    invalid_emails.append(email)
-                    if "deliverable" in str(e).lower() or "dns" in str(e).lower() or "unresolved" in str(e).lower() or "not existing" in str(e).lower():
-                        black_list.append(email.split('@')[-1])  # Add domain to blacklist if delivery failure or DNS-related error
-                
-                print(index, email)
+                        return
+                    try:
+                        email_info = validate_email(email, check_deliverability=True, dns_resolver=resolver)
+                        # Add the email domain to the checked domains set if resolver is True
+                        if resolver:
+                            checked_domains.append(email_info.domain)
 
+                        if email_info.domain in black_list:
+                            invalid_emails.append(email)
+                        else:
+                            valid_emails.append(email)
+                    except EmailNotValidError as e:
+                        invalid_emails.append(email)
+                        if "deliverable" in str(e).lower() or "dns" in str(e).lower() or "unresolved" in str(
+                                e).lower() or "not existing" in str(e).lower():
+                            black_list.append(
+                                email.split('@')[
+                                    -1])  # Add domain to blacklist if delivery failure or DNS-related error
+                    print(f"{email}")
+            else:
+                for index, email in enumerate(chunked_emails):
+                    if stop_validation_flag.is_set():
+                        print("Validation stopped.")
+                        return
+                    try:
+                        email_info = validate_email(email, check_deliverability=False, dns_resolver=False)
+                        if email_info.domain in blocklist or email_info.domain in black_list:
+                            invalid_emails.append(email)
+                        else:
+                            valid_emails.append(email)
+                    except EmailNotValidError as e:
+                        invalid_emails.append(email)
+                    print(f"{email}")
 
         # headline
         multipleLabel = customtkinter.CTkLabel(master=self.tab("Multiple"), text="Multiple-Validator",
