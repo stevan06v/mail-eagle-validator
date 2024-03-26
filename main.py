@@ -96,11 +96,6 @@ class MailsListTopLevelWindow(customtkinter.CTkToplevel):
                 self.toplevel_window.destroy()
             self.toplevel_window = SingleMailToplevelWindow(email=selected_option)
 
-        def split_into_chunks(lst, num_chunks):
-            chunk_size = (len(lst) + num_chunks - 1) // num_chunks
-            chunks = [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
-            return chunks
-
         validLabel = customtkinter.CTkLabel(master=self, text=title,
                                             text_color="red" if title == "Invalid Emails" else "green",
                                             font=("System", 14, "bold"))
