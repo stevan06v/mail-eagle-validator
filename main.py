@@ -8,13 +8,16 @@ from CTkListbox import *
 from tkinter import filedialog as fd
 from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
+import os
 
+
+cores = os.cpu_count()
 email_list = []
 invalid_emails = []
 valid_emails = []
 black_list = list()
 checked_domains = []
-thread_count = 32
+thread_count = cores * 2
 show_email_count = 500
 validation_thread = None
 stop_validation_flag = threading.Event()
