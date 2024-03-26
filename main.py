@@ -103,16 +103,21 @@ class MailsListTopLevelWindow(customtkinter.CTkToplevel):
                                             font=("System", 14, "bold"))
         validLabel.pack(padx=20, pady=10)
 
+
         listbox = CTkListbox(self, command=show_value)
         listbox.delete("all")
 
-        chunked_emails = split_into_chunks(emails, thread_count)
-
-        for index, email in enumerate(chunked_emails):
-            listbox.insert(index, email)
-
         listbox.pack(fill="both", expand=True, padx=10, pady=10)
         listbox.place(relx=.5, rely=.4, anchor=tkinter.CENTER, relwidth=.9, relheight=.4)
+
+        def process_emails():
+            for index, email in enumerate(emails):
+                listbox.insert(index, email)
+
+        def process_emails_async():
+            threading.Thread(target=process_emails, daemon=True).start()
+
+        process_emails_async()
 
         def export_data():
             try:
@@ -160,7 +165,6 @@ class TabView(customtkinter.CTkTabview):
                 self.notification_toplevel_window.focus()
 
         # tab "Single":
-
         # headline
         singleLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Single-Validator", fg_color="transparent",
                                              font=("System", 20, "bold"))
@@ -334,8 +338,7 @@ class TabView(customtkinter.CTkTabview):
 
             if email_list:
                 validateAllButton.configure(text="...", state=tkinter.DISABLED)
-                validation_thread = threading.Thread(target=validate_all)
-                validation_thread.start()
+                threading.Thread(target=validate_all, daemon=True).start()
 
         def stop_validation():
             validateAllButton.configure(text="Validate", state=tkinter.ACTIVE)
