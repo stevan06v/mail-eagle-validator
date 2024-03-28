@@ -291,7 +291,7 @@ class TabView(customtkinter.CTkTabview):
             stop_validation_flag.clear()
 
         def reset_lists():
-            global invalid_emails, valid_emails, checked_invalid_domains,checked_valid_domains,validated_count
+            global invalid_emails, valid_emails, checked_invalid_domains, checked_valid_domains, validated_count
             validated_count = 0
             valid_emails = []
             invalid_emails = []
@@ -360,34 +360,32 @@ class TabView(customtkinter.CTkTabview):
                         print("Validation stopped.")
                         break
 
-                    email_domain = email.split('@')[-1]
+                    domain = email.split('@')[-1]
 
                     # Check if the domain has been previously checked and is invalid
-                    if email_domain in checked_invalid_domains:
+                    if domain in checked_invalid_domains:
                         invalid_emails.append(email)
                         continue
-                    else:
-                        if email_domain in black_list:
-                            invalid_emails.append(email)
-                            checked_invalid_domains.add(email_domain)
-                        else:
-                            resolver = caching_resolver(timeout=10)
-                            try:
-                                email_info = validate_email(email, check_deliverability=True,
-                                                            dns_resolver=resolver) \
-                                    if email_domain not in checked_valid_domains else validate_email(
-                                    email, check_deliverability=False, dns_resolver=None)
 
-                                valid_emails.append(email_info.normalized)
-                                checked_valid_domains.add(email_domain)
+                    if domain in black_list:
+                        invalid_emails.append(email)
+                        checked_invalid_domains.add(domain)
+                        continue
 
-                            except EmailNotValidError as e:
-                                invalid_emails.append(email)
-                                error_msg = str(e).lower()
-                                # Handle specific error cases
-                                if any(keyword in error_msg for keyword in
-                                       ["deliverable", "dns", "unresolved", "not existing"]):
-                                    checked_invalid_domains.add(email_domain)  # Add domain to blacklist
+                    resolver = caching_resolver(timeout=10)
+                    try:
+                        valid = domain not in checked_valid_domains
+                        email_info = validate_email(email, check_deliverability=valid, dns_resolver=resolver)
+
+                        valid_emails.append(email_info.normalized)
+                        checked_valid_domains.add(domain)
+                    except EmailNotValidError as e:
+                        invalid_emails.append(email)
+                        error_msg = str(e).lower()
+                        if any(keyword in error_msg for keyword in
+                               ["deliverable", "dns", "unresolved", "not existing"]):
+                            checked_invalid_domains.add(domain)
+
                     increase_validate_count()
                     print(email)
             else:
