@@ -15,7 +15,6 @@ from email.utils import getaddresses
 from PIL import Image, ImageTk
 import base64
 
-
 queue_for_insert = queue.Queue()
 cores = os.cpu_count()
 stop_processing_flag = threading.Event()
@@ -23,68 +22,13 @@ email_list = []
 invalid_emails = []
 valid_emails = []
 black_list = list()
-checked_domains = set()
+checked_invalid_domains = set()
+checked_valid_domains = set()
 thread_count = os.cpu_count() * 2
 show_email_count = 50
 validated_count = 0
 validation_thread = None
 stop_validation_flag = threading.Event()
-
-
-class NotificationTopLevelWindow(customtkinter.CTkToplevel):
-    def __init__(self, message="", valid=True, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.geometry("200x50")
-
-        self.maxsize(200, 50)
-        self.minsize(200, 50)
-        self.title("Success" if valid else "Error")
-
-        message_label = customtkinter.CTkLabel(master=self, text=message,
-                                               font=("System", 12, "bold"), text_color="green" if valid else "red")
-        message_label.place(relx=.5, rely=.45, anchor=tkinter.CENTER)
-
-
-class SingleMailToplevelWindow(customtkinter.CTkToplevel):
-    def __init__(self, email="", *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.geometry("500x100")
-        self.title(f"{email}-Validation")
-        self.maxsize(500, 100)
-        self.minsize(500, 100)
-
-        validLabel = customtkinter.CTkLabel(master=self, text_color="red",
-                                            font=("System", 14, "bold"))
-        validLabel.place(relx=.5, rely=.4, anchor=tkinter.CENTER)
-
-        errorMessageLabel = customtkinter.CTkLabel(master=self, text="",
-                                                   font=("System", 12))
-        errorMessageLabel.place(relx=.5, rely=.45, anchor=tkinter.CENTER)
-
-        def mail_checker():
-            try:
-                email_info = validate_email(email)
-                validLabel.configure(text="Valid email", text_color="green")
-
-                is_in_blocklist = email_info.domain in blocklist
-
-                if not is_in_blocklist:
-                    try:
-                        with open("blacklist.txt", "r") as f:
-                            blacklist = f.read().splitlines()
-                            is_in_blocklist = email_info.domain in blacklist
-                    except FileNotFoundError:
-                        print("Die Blacklist-Datei wurde nicht gefunden.")
-
-                if is_in_blocklist:
-                    validLabel.configure(text="Email found in Blacklist", text_color="red")
-
-            except EmailNotValidError as e:
-                validLabel.configure(text="Invalid email", text_color="red")
-                errorMessageLabel.configure(text=str(e))
-
-        mail_checker()
 
 
 class MailsListTopLevelWindow(customtkinter.CTkToplevel):
@@ -99,17 +43,12 @@ class MailsListTopLevelWindow(customtkinter.CTkToplevel):
         self.maxsize(400, 300)
         self.minsize(400, 300)
 
-        def show_value(selected_option):
-            if self.toplevel_window and self.toplevel_window.winfo_exists():
-                self.toplevel_window.destroy()
-            self.toplevel_window = SingleMailToplevelWindow(email=selected_option)
-
         validLabel = customtkinter.CTkLabel(master=self, text=title,
                                             text_color="red" if title == "Invalid Emails" else "green",
                                             font=("System", 14, "bold"))
         validLabel.pack(padx=20, pady=10)
 
-        listbox = CTkListbox(self, command=show_value)
+        listbox = CTkListbox(self)
         listbox.delete("all")
 
         listbox.pack(fill="both", expand=True, padx=10, pady=10)
@@ -164,12 +103,6 @@ class TabView(customtkinter.CTkTabview):
 
         self.tab("Single").configure(height=200, width=200)
 
-        def open_notification_toplevel(message, success):
-            if self.notification_toplevel_window is None or not self.notification_toplevel_window.winfo_exists():
-                self.notification_toplevel_window = NotificationTopLevelWindow(message, success)
-            else:
-                self.notification_toplevel_window.focus()
-
         # tab "Single":
         # headline
         singleLabel = customtkinter.CTkLabel(master=self.tab("Single"), text="Single-Validator", fg_color="transparent",
@@ -180,6 +113,7 @@ class TabView(customtkinter.CTkTabview):
             global black_list
             try:
                 errorMessageLabel.configure(text="")
+
                 resolver = caching_resolver(timeout=10)
                 email_info = validate_email(emailInput.get(), check_deliverability=True, dns_resolver=resolver)
 
@@ -307,11 +241,6 @@ class TabView(customtkinter.CTkTabview):
                 # assign to global list
                 email_list = split_into_chunks(sorted_emails, thread_count)
 
-                if email_list:
-                    open_notification_toplevel("Successfully imported emails!", True)
-                else:
-                    open_notification_toplevel("Error while handling the email-list!", False)
-
                 # chunk emails that are rendered in the ui
                 show_emails = emails[:show_email_count] if show_email_count < len(emails) else emails
                 chunked_list = split_into_chunks(show_emails, thread_count)
@@ -339,16 +268,10 @@ class TabView(customtkinter.CTkTabview):
                 if row:
                     queue_for_insert.put((index + (len(emails) * curr_list), row))
 
-
         def split_into_chunks(lst, num_chunks):
             chunk_size = (len(lst) + num_chunks - 1) // num_chunks
             chunks = [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
             return chunks
-
-        def show_value(selected_option):
-            if self.toplevel_window and self.toplevel_window.winfo_exists():
-                self.toplevel_window.destroy()
-            self.toplevel_window = SingleMailToplevelWindow(email=selected_option)
 
         def run_validation_task():
 
@@ -368,11 +291,12 @@ class TabView(customtkinter.CTkTabview):
             stop_validation_flag.clear()
 
         def reset_lists():
-            global invalid_emails, valid_emails, checked_domains, validated_count
+            global invalid_emails, valid_emails, checked_invalid_domains,checked_valid_domains,validated_count
             validated_count = 0
             valid_emails = []
             invalid_emails = []
-            checked_domains = set()
+            checked_invalid_domains = set()
+            checked_valid_domains = set()
 
         def validate_all():
             dns_check = switch.get()
@@ -428,7 +352,7 @@ class TabView(customtkinter.CTkTabview):
             validateAllButton.configure(text=validated_count)
 
         def validate_chunked_list(chunked_emails, check_dns):
-            global black_list, checked_domains, invalid_emails, valid_emails
+            global black_list, checked_invalid_domains, invalid_emails, valid_emails, checked_valid_domains
 
             if check_dns:
                 for index, email in enumerate(chunked_emails):
@@ -437,21 +361,25 @@ class TabView(customtkinter.CTkTabview):
                         break
 
                     email_domain = email.split('@')[-1]
-                    # Check if the domain has been previously checked
-                    if email_domain in checked_domains:
+
+                    # Check if the domain has been previously checked and is invalid
+                    if email_domain in checked_invalid_domains:
                         invalid_emails.append(email)
                         continue
                     else:
                         if email_domain in black_list:
                             invalid_emails.append(email)
-                            checked_domains.add(email_domain)
+                            checked_invalid_domains.add(email_domain)
                         else:
-                            # Set resolver based on whether DNS check is enabled
                             resolver = caching_resolver(timeout=10)
                             try:
-                                email_info = validate_email(email, check_deliverability=True, dns_resolver=resolver)
-                                checked_domains.add(email_domain)
+                                email_info = validate_email(email, check_deliverability=True,
+                                                            dns_resolver=resolver) \
+                                    if email_domain not in checked_valid_domains else validate_email(
+                                    email, check_deliverability=False, dns_resolver=None)
+
                                 valid_emails.append(email_info.normalized)
+                                checked_valid_domains.add(email_domain)
 
                             except EmailNotValidError as e:
                                 invalid_emails.append(email)
@@ -459,7 +387,8 @@ class TabView(customtkinter.CTkTabview):
                                 # Handle specific error cases
                                 if any(keyword in error_msg for keyword in
                                        ["deliverable", "dns", "unresolved", "not existing"]):
-                                    checked_domains.add(email_domain)  # Add domain to blacklist
+                                    checked_invalid_domains.add(email_domain)  # Add domain to blacklist
+                    increase_validate_count()
                     print(email)
             else:
                 for index, email in enumerate(chunked_emails):
@@ -497,7 +426,7 @@ class TabView(customtkinter.CTkTabview):
 
         switch.grid(row=1, column=0, padx=15)
 
-        listbox = CTkListbox(master=self.tab("Multiple"), command=show_value, height=180, width=50)
+        listbox = CTkListbox(master=self.tab("Multiple"), height=180, width=50)
         listbox.grid(row=2, column=0, columnspan=2, padx=(50, 10), pady=10, sticky="nsew")
 
         # submit-button
@@ -544,10 +473,11 @@ class TabView(customtkinter.CTkTabview):
         saveButton = customtkinter.CTkButton(master=self.tab("Blacklist"), text="Save Blacklist",
                                              command=save_blacklist)
         saveButton.place(relx=.7, rely=.9, anchor=tkinter.CENTER)
-        
+
         # tab "Downloader":
         # Headline
-        headline_label = customtkinter.CTkLabel(master=self.tab("Downloader"), text="Downloader", font=("System", 20, "bold"))
+        headline_label = customtkinter.CTkLabel(master=self.tab("Downloader"), text="Downloader",
+                                                font=("System", 20, "bold"))
         headline_label.grid(row=0, column=1)
 
         # Email address
@@ -576,7 +506,8 @@ class TabView(customtkinter.CTkTabview):
         self.port_entry.insert(0, "993")
 
         # Save location
-        filename_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="Save Location:")
+        filename_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"),
+                                                text="Save Location:")
         filename_label.grid(row=5, column=0, sticky="w")
         self.filename_entry = customtkinter.CTkEntry(master=self.tab("Downloader"), width=30)
         self.filename_entry.grid(row=5, column=1, sticky="ew")
@@ -590,23 +521,25 @@ class TabView(customtkinter.CTkTabview):
         separator_label.grid(row=7, column=0, sticky="w")
         self.separator_var = tk.StringVar(value=";")
         separator_combobox = customtkinter.CTkOptionMenu(master=self.tab("Downloader"), values=[";", ","],
-                                        state="readonly")
+                                                         state="readonly")
         separator_combobox.grid(row=7, column=1, sticky="ew")
 
         format_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="File Format:")
         format_label.grid(row=8, column=0, sticky="w")
         self.format_var = tk.StringVar(value="CSV")
         format_combobox = customtkinter.CTkOptionMenu(master=self.tab("Downloader"), values=["CSV", "TXT"],
-                                    state="readonly")
+                                                      state="readonly")
         format_combobox.grid(row=8, column=1, sticky="ew")
 
         # Status
         self.status_var = tk.StringVar()
-        self.status_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), textvariable=self.status_var)
+        self.status_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"),
+                                                   textvariable=self.status_var)
         self.status_label.grid(row=9, column=1, sticky="ew", pady=(10, 0))
 
         # Download button
-        self.download_button = customtkinter.CTkButton(master=self.tab("Downloader"), text="Start Download", command=self.start_download)
+        self.download_button = customtkinter.CTkButton(master=self.tab("Downloader"), text="Start Download",
+                                                       command=self.start_download)
         self.download_button.grid(row=10, column=1, sticky="ew", pady=(10, 0))
 
         for child in self.tab("Downloader").winfo_children():
@@ -643,7 +576,7 @@ class TabView(customtkinter.CTkTabview):
             mail = imaplib.IMAP4_SSL(server, port)
             mail.login(email, password)
             self.update_status("Connection to Server successful.")
-            
+
             mail.select('inbox')
             self.update_status("Gatering E-Mail-Adresses...")
 
@@ -676,13 +609,12 @@ class TabView(customtkinter.CTkTabview):
         finally:
             if 'mail' in locals():
                 mail.logout()
-                
+
         # Reset fields
         self.email_entry.delete(0, tk.END)
         self.password_entry.delete(0, tk.END)
         self.server_entry.delete(0, tk.END)
         self.filename_entry.delete(0, tk.END)
-
 
 
 class App(customtkinter.CTk):
