@@ -1,13 +1,20 @@
 import queue
 import threading
+import tkinter as tk
 import tkinter
 import customtkinter
 import csv
 from CTkListbox import *
-from tkinter import filedialog as fd
+from tkinter import filedialog as fd, messagebox, ttk
 from email_validator import validate_email, caching_resolver, EmailNotValidError
 from disposable_email_domains import blocklist
 import os
+import imaplib
+from email import message_from_bytes
+from email.utils import getaddresses
+from PIL import Image, ImageTk
+import base64
+
 
 queue_for_insert = queue.Queue()
 cores = os.cpu_count()
@@ -153,6 +160,7 @@ class TabView(customtkinter.CTkTabview):
         self.add("Single")
         self.add("Multiple")
         self.add("Blacklist")
+        self.add("Mail Downloader")
 
         self.tab("Single").configure(height=200, width=200)
 
@@ -536,6 +544,150 @@ class TabView(customtkinter.CTkTabview):
         saveButton = customtkinter.CTkButton(master=self.tab("Blacklist"), text="Save Blacklist",
                                              command=save_blacklist)
         saveButton.place(relx=.7, rely=.9, anchor=tkinter.CENTER)
+        
+                # tab "Mail Downloader":
+        # Headline
+        headline_label = customtkinter.CTkLabel(master=self.tab("Mail Downloader"), text="Mail Downloader", font=("System", 20, "bold"))
+        headline_label.grid(row=0, column=1)
+
+        # Email address
+        email_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Email Address:")
+        email_label.grid(row=1, column=0, sticky="w")
+        self.email_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), width=30)
+        self.email_entry.grid(row=1, column=1, sticky="ew")
+
+        # Password
+        password_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Password:")
+        password_label.grid(row=2, column=0, sticky="w")
+        self.password_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), show="*", width=30)
+        self.password_entry.grid(row=2, column=1, sticky="ew")
+
+        # IMAP server
+        server_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="IMAP Server:")
+        server_label.grid(row=3, column=0, sticky="w")
+        self.server_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), width=30)
+        self.server_entry.grid(row=3, column=1, sticky="ew")
+
+        # IMAP port
+        port_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="IMAP Port:")
+        port_label.grid(row=4, column=0, sticky="w")
+        self.port_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), width=10)
+        self.port_entry.grid(row=4, column=1, sticky="ew")
+        self.port_entry.insert(0, "993")
+
+        # Save location
+        filename_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Save Location:")
+        filename_label.grid(row=5, column=0, sticky="w")
+        self.filename_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), width=30)
+        self.filename_entry.grid(row=5, column=1, sticky="ew")
+
+        # Browse button
+        self.browse_button = customtkinter.CTkButton(master=self.tab("Mail Downloader"), text="Browse", command=self.browse)
+        self.browse_button.grid(row=6, column=1, sticky="w")
+
+        # Separator and format
+        separator_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Separator:")
+        separator_label.grid(row=7, column=0, sticky="w")
+        self.separator_var = tk.StringVar(value=";")
+        separator_combobox = ttk.Combobox(master=self.tab("Mail Downloader"), textvariable=self.separator_var, values=[";", ","],
+                                        state="readonly")
+        separator_combobox.grid(row=7, column=1, sticky="ew")
+
+        format_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="File Format:")
+        format_label.grid(row=8, column=0, sticky="w")
+        self.format_var = tk.StringVar(value="CSV")
+        format_combobox = ttk.Combobox(master=self.tab("Mail Downloader"), textvariable=self.format_var, values=["CSV", "TXT"],
+                                    state="readonly")
+        format_combobox.grid(row=8, column=1, sticky="ew")
+
+        # Status
+        self.status_var = tk.StringVar()
+        self.status_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), textvariable=self.status_var)
+        self.status_label.grid(row=9, column=1, sticky="ew", pady=(10, 0))
+
+        # Download button
+        self.download_button = customtkinter.CTkButton(master=self.tab("Mail Downloader"), text="Start Download", command=self.start_download)
+        self.download_button.grid(row=10, column=1, sticky="ew", pady=(10, 0))
+
+        # Powered by
+        powered_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Powered by Webagentur Hochmeir")
+        powered_label.grid(row=11, column=1, sticky="ew", pady=(10, 0))
+
+        for child in self.tab("Mail Downloader").winfo_children():
+            child.grid_configure(pady=5, sticky="ew")
+
+
+    def browse(self):
+        filetype = [('CSV files', '*.csv')] if self.format_var.get() == "CSV" else [('Text files', '*.txt')]
+        filepath = fd.asksaveasfilename(defaultextension=filetype[0][1], filetypes=filetype)
+        if filepath:
+            self.filename_entry.delete(0, tk.END)
+            self.filename_entry.insert(0, filepath)
+
+    def update_status(self, message):
+        self.status_var.set(message)
+        self.update_idletasks()
+
+    def start_download(self):
+        email = self.email_entry.get()
+        password = self.password_entry.get()
+        server = self.server_entry.get()
+        port = self.port_entry.get()
+        filename = self.filename_entry.get()
+        separator = self.separator_var.get()
+        format = self.format_var.get()
+
+        if not os.path.isabs(filename):
+            messagebox.showerror("Error", "Please use a valid path!")
+            return
+
+        self.update_status("Connecting to Server...")
+
+        try:
+            email_addresses = set()
+            mail = imaplib.IMAP4_SSL(server, port)
+            mail.login(email, password)
+            self.update_status("Connection to Server successful.")
+            
+            mail.select('inbox')
+            self.update_status("Gatering E-Mail-Adresses...")
+
+            result, messages = mail.search(None, 'ALL')
+            if result == 'OK':
+                for num in messages[0].split():
+                    result, data = mail.fetch(num, '(RFC822)')
+                    if result == 'OK':
+                        msg = message_from_bytes(data[0][1])
+                        email_from = msg['From']
+                        addresses = getaddresses([email_from])
+                        for name, addr in addresses:
+                            if addr:
+                                email_addresses.add((name, addr))  # Speichern als Tupel
+
+            self.update_status("Writing E-Mails into file...")
+            with open(filename, 'w', encoding='utf-8') as file:
+                for name, addr in sorted(email_addresses, key=lambda x: x[1]):  # Sortierung nach E-Mail
+                    if format == "CSV":
+                        line = f'"{name}"{separator}"{addr}"'
+                    else:  # TXT-Format
+                        line = f"{name}\t{addr}"
+                    file.write(line + "\n")
+
+            self.update_status("The E-Mails were successfully \ndownloaded and saved.")
+            messagebox.showinfo("Success", "The E-Mails were successfully \ndownloaded and saved.")
+        except Exception as e:
+            self.update_status("An Error occured.")
+            messagebox.showerror("Error", f"An Error occured: {e}")
+        finally:
+            if 'mail' in locals():
+                mail.logout()
+                
+        # Reset fields
+        self.email_entry.delete(0, tk.END)
+        self.password_entry.delete(0, tk.END)
+        self.server_entry.delete(0, tk.END)
+        self.filename_entry.delete(0, tk.END)
+
 
 
 class App(customtkinter.CTk):
