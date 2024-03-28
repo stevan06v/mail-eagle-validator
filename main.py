@@ -160,7 +160,7 @@ class TabView(customtkinter.CTkTabview):
         self.add("Single")
         self.add("Multiple")
         self.add("Blacklist")
-        self.add("Mail Downloader")
+        self.add("Downloader")
 
         self.tab("Single").configure(height=200, width=200)
 
@@ -545,75 +545,75 @@ class TabView(customtkinter.CTkTabview):
                                              command=save_blacklist)
         saveButton.place(relx=.7, rely=.9, anchor=tkinter.CENTER)
         
-                # tab "Mail Downloader":
+                # tab "Downloader":
         # Headline
-        headline_label = customtkinter.CTkLabel(master=self.tab("Mail Downloader"), text="Mail Downloader", font=("System", 20, "bold"))
+        headline_label = customtkinter.CTkLabel(master=self.tab("Downloader"), text="Downloader", font=("System", 20, "bold"))
         headline_label.grid(row=0, column=1)
 
         # Email address
-        email_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Email Address:")
+        email_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="Email Address:")
         email_label.grid(row=1, column=0, sticky="w")
-        self.email_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), width=30)
+        self.email_entry = customtkinter.CTkEntry(master=self.tab("Downloader"), width=30)
         self.email_entry.grid(row=1, column=1, sticky="ew")
 
         # Password
-        password_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Password:")
+        password_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="Password:")
         password_label.grid(row=2, column=0, sticky="w")
-        self.password_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), show="*", width=30)
+        self.password_entry = customtkinter.CTkEntry(master=self.tab("Downloader"), show="*", width=30)
         self.password_entry.grid(row=2, column=1, sticky="ew")
 
         # IMAP server
-        server_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="IMAP Server:")
+        server_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="IMAP Server:")
         server_label.grid(row=3, column=0, sticky="w")
-        self.server_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), width=30)
+        self.server_entry = customtkinter.CTkEntry(master=self.tab("Downloader"), width=30)
         self.server_entry.grid(row=3, column=1, sticky="ew")
 
         # IMAP port
-        port_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="IMAP Port:")
+        port_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="IMAP Port:")
         port_label.grid(row=4, column=0, sticky="w")
-        self.port_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), width=10)
+        self.port_entry = customtkinter.CTkEntry(master=self.tab("Downloader"), width=10)
         self.port_entry.grid(row=4, column=1, sticky="ew")
         self.port_entry.insert(0, "993")
 
         # Save location
-        filename_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Save Location:")
+        filename_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="Save Location:")
         filename_label.grid(row=5, column=0, sticky="w")
-        self.filename_entry = customtkinter.CTkEntry(master=self.tab("Mail Downloader"), width=30)
+        self.filename_entry = customtkinter.CTkEntry(master=self.tab("Downloader"), width=30)
         self.filename_entry.grid(row=5, column=1, sticky="ew")
 
         # Browse button
-        self.browse_button = customtkinter.CTkButton(master=self.tab("Mail Downloader"), text="Browse", command=self.browse)
+        self.browse_button = customtkinter.CTkButton(master=self.tab("Downloader"), text="Browse", command=self.browse)
         self.browse_button.grid(row=6, column=1, sticky="w")
 
         # Separator and format
-        separator_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Separator:")
+        separator_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="Separator:")
         separator_label.grid(row=7, column=0, sticky="w")
         self.separator_var = tk.StringVar(value=";")
-        separator_combobox = ttk.Combobox(master=self.tab("Mail Downloader"), textvariable=self.separator_var, values=[";", ","],
+        separator_combobox = ttk.Combobox(master=self.tab("Downloader"), textvariable=self.separator_var, values=[";", ","],
                                         state="readonly")
         separator_combobox.grid(row=7, column=1, sticky="ew")
 
-        format_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="File Format:")
+        format_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="File Format:")
         format_label.grid(row=8, column=0, sticky="w")
         self.format_var = tk.StringVar(value="CSV")
-        format_combobox = ttk.Combobox(master=self.tab("Mail Downloader"), textvariable=self.format_var, values=["CSV", "TXT"],
+        format_combobox = ttk.Combobox(master=self.tab("Downloader"), textvariable=self.format_var, values=["CSV", "TXT"],
                                     state="readonly")
         format_combobox.grid(row=8, column=1, sticky="ew")
 
         # Status
         self.status_var = tk.StringVar()
-        self.status_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), textvariable=self.status_var)
+        self.status_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), textvariable=self.status_var)
         self.status_label.grid(row=9, column=1, sticky="ew", pady=(10, 0))
 
         # Download button
-        self.download_button = customtkinter.CTkButton(master=self.tab("Mail Downloader"), text="Start Download", command=self.start_download)
+        self.download_button = customtkinter.CTkButton(master=self.tab("Downloader"), text="Start Download", command=self.start_download)
         self.download_button.grid(row=10, column=1, sticky="ew", pady=(10, 0))
 
         # Powered by
-        powered_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Mail Downloader"), text="Powered by Webagentur Hochmeir")
+        powered_label = customtkinter.CTkLabel(font=("System", 12), master=self.tab("Downloader"), text="Powered by Webagentur Hochmeir")
         powered_label.grid(row=11, column=1, sticky="ew", pady=(10, 0))
 
-        for child in self.tab("Mail Downloader").winfo_children():
+        for child in self.tab("Downloader").winfo_children():
             child.grid_configure(pady=5, sticky="ew")
 
 
