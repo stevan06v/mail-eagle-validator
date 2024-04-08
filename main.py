@@ -14,6 +14,11 @@ from email import message_from_bytes
 from email.utils import getaddresses
 from PIL import Image, ImageTk
 import base64
+import os
+
+
+base_dir = os.path.dirname(__file__)
+blacklist_file_path = os.path.join(base_dir, './blacklist.txt')
 
 queue_for_insert = queue.Queue()
 cores = os.cpu_count()
@@ -110,7 +115,7 @@ class TabView(customtkinter.CTkTabview):
         singleLabel.place(relx=.5, rely=.05, anchor=tkinter.CENTER)
 
         def mail_checker():
-            global black_list
+            global black_list, blacklist_file_path
             try:
                 errorMessageLabel.configure(text="")
 
@@ -125,7 +130,7 @@ class TabView(customtkinter.CTkTabview):
 
                 if not is_in_blocklist:
                     try:
-                        with open("blacklist.txt", "r") as f:
+                        with open(blacklist_file_path, "r") as f:
                             blacklist = f.read().splitlines()
                             is_in_blocklist = email_info.domain in blacklist
                     except FileNotFoundError:
@@ -304,13 +309,13 @@ class TabView(customtkinter.CTkTabview):
             # Reset stop flag before starting validation
             reset_stop_validation_flag()
 
-            global thread_count, email_list, black_list
+            global thread_count, email_list, black_list,blacklist_file_path
 
             reset_lists()
             jobs = []
 
             try:
-                with open("blacklist.txt", "r") as f:
+                with open(blacklist_file_path, "r") as f:
                     black_list = f.read().splitlines()
             except FileNotFoundError:
                 print("Die Blacklist-Datei wurde nicht gefunden.")
@@ -447,8 +452,9 @@ class TabView(customtkinter.CTkTabview):
         # tab "Blacklist":
 
         def load_blacklist():
+            global blacklist_file_path
             try:
-                with open("blacklist.txt", "r") as f:
+                with open(blacklist_file_path, "r") as f:
                     blacklist_content = f.read()
                     blacklistTextbox.delete("1.0", "end")  # Clear existing content
                     blacklistTextbox.insert("1.0", blacklist_content)  # Insert content from file
@@ -456,8 +462,9 @@ class TabView(customtkinter.CTkTabview):
                 print("Die Blacklist-Datei wurde nicht gefunden.")
 
         def save_blacklist():
+            global blacklist_file_path
             blacklist_content = blacklistTextbox.get("1.0", "end-1c")  # Get all content except the trailing newline
-            with open("blacklist.txt", "w") as f:
+            with open(blacklist_file_path, "w") as f:
                 f.write(blacklist_content)
 
         blacklistTextbox = customtkinter.CTkTextbox(master=self.tab("Blacklist"))

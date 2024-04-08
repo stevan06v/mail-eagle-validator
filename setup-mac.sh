@@ -4,3 +4,5 @@ pip install --upgrade pip
 pip install -r requirements.txt
 brew install python-tk
 
+source venv/bin/activate
+
