@@ -1,5 +1,7 @@
 bash setup-mac.sh
 
+pip install pillow --break-system-packages
+
 pyinstaller --name 'MailEagle' \
             --icon 'icon.ico' \
             --windowed  \
