@@ -1,5 +1,6 @@
 import queue
 import threading
+import sys
 import tkinter as tk
 import tkinter
 import customtkinter
@@ -16,9 +17,13 @@ from PIL import Image, ImageTk
 import base64
 import os
 
-
 base_dir = os.path.dirname(__file__)
-blacklist_file_path = os.path.join(base_dir, './blacklist.txt')
+
+        
+if hasattr(sys, '_MEIPASS'):
+    blacklist_file_path = os.path.join(sys._MEIPASS, './blacklist.txt')
+else:
+    blacklist_file_path = './blacklist.txt'
 
 queue_for_insert = queue.Queue()
 cores = os.cpu_count()
@@ -629,6 +634,15 @@ class App(customtkinter.CTk):
         self.title("Mail-Eagle")
         self.geometry("500x600")
 
+        
+        if hasattr(sys, '_MEIPASS'):
+            icon_path = os.path.join(sys._MEIPASS, 'icon.ico')
+        else:
+            icon_path = 'icon.ico'
+
+        # Set the window icon
+        self.iconbitmap(icon_path)
+        
         self.maxsize(500, 600)
         self.minsize(500, 600)
 
