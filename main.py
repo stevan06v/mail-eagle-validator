@@ -24,6 +24,12 @@ if hasattr(sys, '_MEIPASS'):
     blacklist_file_path = os.path.join(sys._MEIPASS, './blacklist.txt')
 else:
     blacklist_file_path = './blacklist.txt'
+    
+try:
+    with open(blacklist_file_path, "r") as f:
+        blacklist = f.read().splitlines()
+except FileNotFoundError:
+    print("Die Blacklist-Datei wurde nicht gefunden.")
 
 queue_for_insert = queue.Queue()
 cores = os.cpu_count()
